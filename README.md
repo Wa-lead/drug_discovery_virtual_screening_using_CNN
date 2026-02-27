@@ -1,50 +1,120 @@
-# Drug Discovery using Virtual Screening
-This project aims to develop a computational approach for drug discovery using virtual screening techniques. Virtual screening is a computational method that involves screening large chemical libraries to identify potential drug candidates. It can significantly reduce the time and cost required for the initial stages of drug discovery.
+# Drug Discovery Virtual Screening using Chemception
 
+A CNN-based virtual screening pipeline that predicts biological activity of chemical compounds using molecular image representations, built on InceptionV3 transfer learning with custom molecular featurization.
 
-https://github.com/Wa-lead/Virtual_screnning_using_CNNs/assets/81301826/f22e3a86-7025-4ca3-bb5b-7bba8055d0bd
+## Architecture
 
+The model uses a modified InceptionV3 backbone with transfer learning for binary activity classification.
 
-# Project Overview
-The project consists of several steps:
+<div align="center">
+<img src="images/model_arch.png" width="700"/>
+</div>
 
-* Data Preparation: The project utilizes a dataset of chemical compounds and their corresponding biological activities. The dataset is preprocessed and featurized using the ChemCeption model.
+## Pipeline
 
+```
+SMILES → RDKit Mol → 4-Channel Featurization → Weighted Fusion (3-Ch RGB) → InceptionV3 → Active/Inactive
+```
 
-![Alt text](images/Featurizer.png)
+1. **Data preparation** — Parse SMILES strings into RDKit molecule objects ([`data/data_prepare.ipynb`](data/data_prepare.ipynb))
+2. **Featurization** — Convert molecules to 4-channel images encoding bond order, atom type, hybridization, and Gasteiger charges
+3. **Weighted fusion** — Fuse 4 channels into 3 (RGB) for InceptionV3 compatibility
+4. **Training** — Fine-tune InceptionV3 with BOHB hyperparameter optimization
+5. **Evaluation** — ROC-AUC on held-out test set
+6. **Inference** — Gradio app with Grad-CAM interpretability
 
-* Model Building: The ChemCeption model, which is based on the InceptionV3 architecture, is used to predict the biological activity of the chemical compounds. The model is trained using the preprocessed data.
-* Model Evaluation: The trained model is evaluated using a separate test dataset. The performance of the model is measured using metrics such as ROC curve and AUC score.
+## Featurization
 
+Each molecule is rendered as a multi-channel image where pixel values encode chemical properties:
 
-![Alt text](images/ROC.png)
+<div align="center">
+<img src="images/Featurizer.png" width="700"/>
+</div>
 
+The 4 channels are fused into 3 via weighted combination to leverage ImageNet-pretrained weights:
 
-* Kernel Visualization: The project includes techniques for visualizing the model's decision-making process, such as kernel visualization and Grad-CAM.
+<div align="center">
+<img src="images/after_fusion.png" width="700"/>
+</div>
 
-![Alt text](images/kernel.png)
+## Results
 
+**ROC-AUC: 0.69** on the PubChem AID686978 bioassay dataset.
 
-![Alt text](images/GradCAM.png)
+<div align="center">
+<img src="images/ROC.png" width="400"/>
+</div>
 
-# Hyperparameter Optimization 
-We used the **Hpbandster** package for optimizing the model, which combines hyperband and bayesian optimization.
+### Kernel Visualization
 
-![Alt text](images/hpbandster.png)
+<div align="center">
+<img src="images/kernel.png" width="500"/>
+</div>
 
+### Grad-CAM
 
-# Installation
-To run the project, follow these steps:
+Highlights which molecular substructures drive the model's prediction:
 
-Clone the repository:
-> git clone https://github.com/your_username/project.git
+<div align="center">
+<img src="images/GradCAM.png" width="400"/>
+</div>
 
-Install the required dependencies: 
-> pip install -r requirements.txt
+## Hyperparameter Optimization
 
-# Evaluation
-The project achieves an ROC score of 0.69, indicating a good performance in predicting the biological activity of chemical compounds. 
+Hyperparameters were tuned using BOHB (Bayesian Optimization + HyperBand) via the `hpbandster` library.
 
-# Usage
-Run the inference.ipynb
-![Capture-2023-05-17-132002](https://github.com/Wa-lead/Chemception_using_transfer_learning/assets/81301826/a4ad8699-cafb-49f8-96a7-dcf43304358a)
+<div align="center">
+<img src="images/hpbandster.png" width="500"/>
+</div>
+
+| Hyperparameter | Value  |
+|---------------|--------|
+| dense_layers  | 1      |
+| dropout       | 0.1    |
+| lr            | 0.0001 |
+| neurons       | 128    |
+
+## How to Run
+
+```bash
+# Clone
+git clone https://github.com/Wa-lead/drug_discovery_virtual_screening_using_CNN.git
+cd drug_discovery_virtual_screening_using_CNN
+
+# Install
+pip install -r requirements.txt
+
+# Training
+jupyter notebook notebooks/training.ipynb
+
+# Inference (Gradio app)
+jupyter notebook notebooks/inference.ipynb
+```
+
+## Project Structure
+
+```
+├── chemception/          # Model and featurizer package
+│   ├── featurizer.py     # Molecular image featurizer
+│   ├── model.py          # Custom Chemception CNN
+│   └── model_transfer.py # InceptionV3 transfer learning model
+├── hpbandster_opt/       # Hyperparameter optimization
+│   ├── worker.py         # BOHB worker (custom Chemception)
+│   ├── worker_transfer.py# BOHB worker (transfer learning)
+│   └── server.py         # BOHB server
+├── notebooks/
+│   ├── training.ipynb    # End-to-end training pipeline
+│   └── inference.ipynb   # Gradio inference app
+├── models/               # Trained weights
+├── data/                 # PubChem AID686978 bioassay data
+└── images/               # Figures and visualizations
+```
+
+## References
+
+- [Chemception: A Deep Neural Network with Minimal Chemistry Knowledge Matches the Performance of Expert-developed QSAR/QSPR Models](https://www.researchgate.net/publication/317732180)
+- [PubChem Bioassay AID686978](https://pubchem.ncbi.nlm.nih.gov/bioassay/686978)
+
+<div align="center">
+<img src="images/inference.png" width="700"/>
+</div>

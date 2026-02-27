@@ -8,7 +8,7 @@ import hpbandster.core.nameserver as hpns
 import hpbandster.core.result as hpres
 
 from hpbandster.optimizers import BOHB as BOHB
-from chemception_transfer_worker import Chemception_wroker
+from worker_transfer import Chemception_wroker
 
 
 parser = argparse.ArgumentParser(description='Example 1 - sequential and local execution.')
